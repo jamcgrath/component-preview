@@ -354,10 +354,6 @@
 	}
 </script>
 
-<svelte:head>
-	<script src="https://cdn.tailwindcss.com"></script>
-</svelte:head>
-
 <main class="min-h-screen bg-gray-50">
 	<nav class="border-b bg-white shadow-sm">
 		<div class="mx-auto px-4 py-3">
@@ -394,7 +390,9 @@
 
 					<!-- Image Upload Area -->
 					<div class="mb-6">
-						<label class="mb-2 block text-sm font-medium text-gray-700">Reference Image</label>
+						<label for="reference-image" class="mb-2 block text-sm font-medium text-gray-700"
+							>Reference Image</label
+						>
 						<div
 							class="rounded-lg border-2 border-gray-200 bg-gray-50 {imagePreview
 								? ''
@@ -410,6 +408,7 @@
 									<button
 										onclick={removeImage}
 										class="absolute right-2 top-2 rounded-full bg-white/90 p-1 opacity-0 shadow-sm transition-opacity hover:bg-white group-hover:opacity-100"
+										aria-label="Remove image"
 									>
 										<svg
 											class="h-5 w-5 text-gray-600"
@@ -453,6 +452,7 @@
 									<input
 										type="file"
 										accept="image/png,image/jpeg,image/svg+xml"
+										id="reference-image"
 										onchange={handleFileInput}
 										class="hidden"
 										disabled={isLoading}
@@ -464,9 +464,11 @@
 
 					<!-- Text Input Area -->
 					<div class="mb-6">
-						<label class="mb-2 block text-sm font-medium text-gray-700">Component Description</label
+						<label for="component-description" class="mb-2 block text-sm font-medium text-gray-700"
+							>Component Description</label
 						>
 						<textarea
+							id="component-description"
 							bind:value={prompt}
 							class="h-32 w-full resize-none rounded-lg border border-gray-300 bg-white p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
 							placeholder="Describe the component you want to create..."
@@ -508,6 +510,7 @@
 								disabled={currentIndex <= 0 || isLoading}
 								class="rounded-lg bg-gray-100 px-3 py-2 text-gray-700 transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 								title="Undo"
+								aria-label="Undo"
 							>
 								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path
@@ -523,6 +526,7 @@
 								disabled={currentIndex >= history.length - 1 || isLoading}
 								class="rounded-lg bg-gray-100 px-3 py-2 text-gray-700 transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 								title="Redo"
+								aria-label="Redo"
 							>
 								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path
