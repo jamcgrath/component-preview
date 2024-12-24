@@ -1,5 +1,7 @@
 <!-- App.svelte -->
 <script>
+	// @ts-nocheck
+
 	import { onMount } from 'svelte';
 
 	let prompt = $state('');
@@ -32,82 +34,9 @@
 		}
 	});
 
-	async function handleImageUpload(event) {
-		try {
-			const file = event.target.files[0];
-			if (!file) return;
-
-			if (!file.type.startsWith('image/')) {
-				throw new Error('Please upload an image file');
-			}
-
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				referenceImage = e.target.result;
-				imagePreview = e.target.result;
-			};
-			reader.readAsDataURL(file);
-
-			// Reset file input
-			event.target.value = '';
-		} catch (e) {
-			error = e.message || 'Failed to upload image';
-			console.error(e);
-		}
-	}
-
 	function removeImage() {
 		referenceImage = null;
 		imagePreview = null;
-	}
-
-	// Add these to your script section in Svelte component
-	async function callClaudeAPI(prompt, image) {
-		let messages = [
-			{
-				role: 'user',
-				content: []
-			}
-		];
-
-		// Add text content
-		messages[0].content.push({
-			type: 'text',
-			text: `Create a non-functional visual representation of this component: ${prompt}. Return only HTML and CSS code, no JavaScript. Use Tailwind CSS for styling.`
-		});
-
-		// Add image content if present
-		if (image) {
-			messages[0].content.push({
-				type: 'image',
-				source: {
-					type: 'base64',
-					media_type: 'image/jpeg',
-					data: image.split(',')[1] // Remove data URL prefix
-				}
-			});
-		}
-
-		const response = await fetch('/api/claude', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				model: 'claude-3-5-sonnet-20241022',
-				max_tokens: 4096,
-				messages,
-				system:
-					'You are a skilled UI developer. When given a description and optionally a reference image, create a non-functional visual representation of the component using HTML and Tailwind CSS. Return only the code without any explanation.'
-			})
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.error || 'Failed to generate component');
-		}
-
-		return await response.json();
 	}
 
 	async function handleSubmit() {
