@@ -110,7 +110,6 @@
 		return await response.json();
 	}
 
-	//
 	async function handleSubmit() {
 		try {
 			isLoading = true;
@@ -119,7 +118,6 @@
 			let messages = [];
 
 			if (currentIndex >= 0) {
-				// Add previous component as context
 				messages = [
 					{
 						role: 'user',
@@ -150,7 +148,6 @@
 					}
 				];
 			} else {
-				// First-time component creation
 				messages = [
 					{
 						role: 'user',
@@ -166,12 +163,16 @@
 
 			// Add image if present to the last user message
 			if (referenceImage) {
+				// Extract the media type from the data URL
+				const mediaTypeMatch = referenceImage.match(/^data:([^;]+);base64,/);
+				const mediaType = mediaTypeMatch ? mediaTypeMatch[1] : 'image/jpeg';
+
 				messages[messages.length - 1].content.push({
 					type: 'image',
 					source: {
 						type: 'base64',
-						media_type: 'image/jpeg',
-						data: referenceImage.split(',')[1]
+						media_type: mediaType,
+						data: referenceImage.replace(/^data:image\/[^;]+;base64,/, '')
 					}
 				});
 			}
@@ -400,7 +401,7 @@
 									<span class="mt-1 text-xs text-gray-400">Click or drag and drop</span>
 									<input
 										type="file"
-										accept="image/*"
+										accept="image/png,image/jpeg,image/svg+xml"
 										onchange={handleImageUpload}
 										class="hidden"
 										disabled={isLoading}
