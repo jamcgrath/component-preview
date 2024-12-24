@@ -306,6 +306,52 @@
 			localStorage.removeItem('componentHistory');
 		}
 	}
+
+	// Add these functions to your script section
+	function handleDragOver(event) {
+		event.preventDefault();
+		event.currentTarget.classList.add('bg-gray-100');
+	}
+
+	function handleDragLeave(event) {
+		event.preventDefault();
+		event.currentTarget.classList.remove('bg-gray-100');
+	}
+
+	async function handleDrop(event) {
+		event.preventDefault();
+		event.currentTarget.classList.remove('bg-gray-100');
+
+		const file = event.dataTransfer?.files[0];
+		if (file) {
+			await handleFile(file);
+		}
+	}
+
+	async function handleFileInput(event) {
+		const file = event.target?.files[0];
+		if (file) {
+			await handleFile(file);
+		}
+	}
+
+	async function handleFile(file) {
+		try {
+			if (!file.type.startsWith('image/')) {
+				throw new Error('Please upload an image file');
+			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				referenceImage = e.target.result;
+				imagePreview = e.target.result;
+			};
+			reader.readAsDataURL(file);
+		} catch (e) {
+			error = e.message || 'Failed to upload image';
+			console.error(e);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -314,12 +360,12 @@
 
 <main class="min-h-screen bg-gray-50">
 	<nav class="border-b bg-white shadow-sm">
-		<div class="container mx-auto px-4 py-3">
+		<div class="mx-auto px-4 py-3">
 			<h1 class="text-2xl font-semibold text-gray-800">Component Designer</h1>
 		</div>
 	</nav>
 
-	<div class="container mx-auto p-4 lg:p-6">
+	<div class="mx-auto p-4 lg:p-6">
 		<div class="flex flex-col gap-6 lg:flex-row">
 			<!-- Left Panel -->
 			<div class="flex flex-col gap-6 lg:w-1/2">
@@ -382,27 +428,32 @@
 								</div>
 							{:else}
 								<label
-									class="flex h-48 cursor-pointer flex-col items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
+									class="flex h-48 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100"
+									ondragover={handleDragOver}
+									ondragleave={handleDragLeave}
+									ondrop={handleDrop}
 								>
-									<svg
-										class="mb-3 h-10 w-10 text-gray-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
-									<span class="text-sm text-gray-500">Upload reference image</span>
-									<span class="mt-1 text-xs text-gray-400">Click or drag and drop</span>
+									<div class="flex flex-col items-center justify-center pb-6 pt-5">
+										<svg
+											class="mb-3 h-10 w-10 text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+											/>
+										</svg>
+										<p class="text-sm text-gray-500">Drop your image here or click to upload</p>
+										<p class="mt-1 text-xs text-gray-400">PNG, JPG, SVG</p>
+									</div>
 									<input
 										type="file"
 										accept="image/png,image/jpeg,image/svg+xml"
-										onchange={handleImageUpload}
+										onchange={handleFileInput}
 										class="hidden"
 										disabled={isLoading}
 									/>
