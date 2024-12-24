@@ -16,7 +16,7 @@ function extractComponentCode(response) {
 }
 export async function POST({ request }) {
 	const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-	const apiKey = import.meta.env.VITE_CLAUDE_API_KEY;
+	const apiKey = import.meta.env.ANTHROPIC_API_KEY;
 
 	const requestData = await request.json();
 
