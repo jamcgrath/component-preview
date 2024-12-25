@@ -12,6 +12,9 @@
 	let error = $state(null);
 	let referenceImage = null;
 	let imagePreview = $state(null);
+	let showAssetManager = $state(false);
+	let assets = $state([]);
+	let tokenUsage = $state({});
 
 	onMount(() => {
 		try {
@@ -28,22 +31,71 @@
 					imagePreview = history[currentIndex].referenceImage;
 				}
 			}
+			const savedAssets = localStorage.getItem('componentAssets');
+			if (savedAssets) {
+				try {
+					assets = JSON.parse(savedAssets);
+				} catch (e) {
+					console.error('Error loading assets:', e);
+					assets = [];
+				}
+			}
 		} catch (e) {
 			error = 'Failed to load history from local storage';
 			console.error(e);
 		}
 	});
+	async function handleAssetUpload(event) {
+		const file = event.target?.files[0];
+		if (!file) return;
+
+		try {
+			if (!file.type.startsWith('image/')) {
+				throw new Error('Please upload an image file');
+			}
+
+			const reader = new FileReader();
+
+			reader.onload = (e) => {
+				const newAsset = {
+					id: Date.now().toString(),
+					name: file.name,
+					type: file.type,
+					url: e.target.result, // This should contain the base64 data URL
+					timestamp: new Date().toISOString()
+				};
+
+				assets = [...assets, newAsset];
+				localStorage.setItem('componentAssets', JSON.stringify(assets));
+			};
+
+			reader.readAsDataURL(file);
+		} catch (e) {
+			error = e.message || 'Failed to upload asset';
+			console.error(e);
+		}
+	}
+
+	function deleteAsset(assetId) {
+		assets = assets.filter((asset) => asset.id !== assetId);
+		localStorage.setItem('componentAssets', JSON.stringify(assets));
+	}
 
 	function removeImage() {
 		referenceImage = null;
 		imagePreview = null;
 	}
 
+	let isSubmitting = false;
 	async function handleSubmit() {
+		if (isSubmitting) return;
 		try {
+			isSubmitting = true;
 			isLoading = true;
 			error = null;
+			console.log('Starting handleSubmit'); // New log
 
+			const currentAssets = JSON.parse(localStorage.getItem('componentAssets') || '[]');
 			let messages = [];
 
 			if (currentIndex >= 0) {
@@ -53,7 +105,11 @@
 						content: [
 							{
 								type: 'text',
-								text: `Here's my current component: \n\`\`\`html\n${history[currentIndex].component}\n\`\`\``
+								text: `Here's my current component and available assets:\n\nAvailable assets: ${currentAssets
+									.map((asset) => `\n- Image "${asset.name}" with ID "${asset.id}"`)
+									.join(
+										''
+									)}\n\nCurrent component:\n\`\`\`html\n${history[currentIndex].component}\n\`\`\``
 							}
 						]
 					},
@@ -71,7 +127,7 @@
 						content: [
 							{
 								type: 'text',
-								text: `Update the component with this change: ${prompt}`
+								text: `Make this specific change to the component: ${prompt}`
 							}
 						]
 					}
@@ -83,7 +139,11 @@
 						content: [
 							{
 								type: 'text',
-								text: `Create a non-functional visual representation of this component: ${prompt}. Return only HTML and CSS code, no JavaScript. Use Tailwind CSS for styling.`
+								text: `Create a component with these requirements: ${prompt}\n\nAvailable assets:\n${currentAssets
+									.map((asset) => `- Image "${asset.name}" with ID "${asset.id}"`)
+									.join(
+										'\n'
+									)}\n\nWhen using images, reference them by their ID in the src attribute, like: <img src="asset-id-here" alt="">`
 							}
 						]
 					}
@@ -92,7 +152,6 @@
 
 			// Add image if present to the last user message
 			if (referenceImage) {
-				// Extract the media type from the data URL
 				const mediaTypeMatch = referenceImage.match(/^data:([^;]+);base64,/);
 				const mediaType = mediaTypeMatch ? mediaTypeMatch[1] : 'image/jpeg';
 
@@ -105,6 +164,12 @@
 					}
 				});
 			}
+			console.log('Sending request to server with:', { messages }); // New log
+
+			const systemPrompt =
+				currentIndex >= 0
+					? 'You are a UI developer. Modify the provided HTML based on the update request. Return only the modified HTML code wrapped in ```html``` tags.'
+					: 'You are a UI developer. Create a component using HTML and Tailwind CSS. Return only the code without explanation, wrapped in ```html``` tags.';
 
 			const response = await fetch('/api/claude', {
 				method: 'POST',
@@ -112,20 +177,27 @@
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					model: 'claude-3-5-sonnet-20241022',
-					max_tokens: 4096,
-					messages,
-					system:
-						'You are a skilled UI developer. When given a description and optionally a reference image, create or modify components using HTML and Tailwind CSS. Return only the code without any explanation. When asked to update a component, analyze the existing code and apply the requested changes while maintaining the overall structure and any unaffected elements.'
+					requestData: {
+						model: 'claude-3-5-sonnet-20241022',
+						max_tokens: 4096,
+						messages,
+						system: systemPrompt
+					},
+					assets: currentAssets
 				})
 			});
+			console.log('Received response from server'); // New log
+
+			const data = await response.json();
 
 			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to generate component');
+				throw new Error(data.error || 'Failed to generate component');
 			}
 
-			const { component } = await response.json();
+			// if (!data.component) {
+			// 	throw new Error('No component received from server');
+			// }
+			console.log('Updating history with new component:', data.component); // New log
 
 			// Update history
 			history = [
@@ -133,7 +205,7 @@
 				{
 					prompt,
 					timestamp: new Date(),
-					component,
+					component: data.component,
 					referenceImage
 				}
 			];
@@ -142,11 +214,16 @@
 
 			// Save to localStorage
 			localStorage.setItem('componentHistory', JSON.stringify(history));
+
+			tokenUsage = data.token_usage;
 		} catch (e) {
 			error = e.message || 'Failed to generate component. Please try again.';
-			console.error(e);
+			console.error('Error generating component:', e);
+			console.error('Error in handleSubmit:', e); // Enhanced error logging
 		} finally {
+			console.log('Finishing handleSubmit, isLoading set to false'); // New log
 			isLoading = false;
+			isSubmitting = false;
 		}
 	}
 
@@ -316,7 +393,6 @@
 							</div>
 						</div>
 					{/if}
-
 					<!-- Image Upload Area -->
 					<div class="mb-6">
 						<label for="reference-image" class="mb-2 block text-sm font-medium text-gray-700"
@@ -390,7 +466,14 @@
 							{/if}
 						</div>
 					</div>
-
+					<div class="mb-2 flex items-center justify-between">
+						<button
+							onclick={() => (showAssetManager = true)}
+							class="text-sm text-blue-600 hover:text-blue-700"
+						>
+							Browse Assets
+						</button>
+					</div>
 					<!-- Text Input Area -->
 					<div class="mb-6">
 						<label for="component-description" class="mb-2 block text-sm font-medium text-gray-700"
@@ -601,10 +684,123 @@
 							</div>
 						{/if}
 					</div>
+					<div class="mt-1 text-sm text-gray-400">
+						{#if tokenUsage}
+							<ul class="mt-4 flex flex-wrap gap-2">
+								{#each Object.entries(tokenUsage) as [key, value]}
+									<li>{key.replace(/_/g, ' ')}: {value}</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	<!-- Asset Manager Modal -->
+	{#if showAssetManager}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+			<div class="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white p-6">
+				<div class="mb-6 flex items-center justify-between">
+					<h2 class="text-2xl font-semibold">Asset Manager</h2>
+					<button
+						onclick={() => (showAssetManager = false)}
+						class="rounded-lg p-2 hover:bg-gray-100"
+						aria-label="Close asset manager"
+					>
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<div class="flex-grow overflow-auto">
+					{#if assets.length === 0}
+						<div class="py-8 text-center">
+							<p class="text-gray-500">No assets uploaded yet</p>
+						</div>
+					{:else}
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+							{#each assets as asset}
+								<div class="relative overflow-hidden rounded-lg bg-gray-100">
+									<div class="relative aspect-square">
+										<img
+											src={asset.url}
+											alt={asset.name}
+											class="absolute inset-0 h-full w-full object-cover"
+										/>
+										<button
+											onclick={(e) => {
+												e.stopPropagation();
+												deleteAsset(asset.id);
+											}}
+											class="absolute right-2 top-2 rounded-full bg-white p-2 shadow-sm hover:bg-gray-50"
+											aria-label="Delete asset"
+										>
+											<svg
+												class="h-5 w-5 text-red-500"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												/>
+											</svg>
+										</button>
+									</div>
+									<div class="p-3">
+										<p class="truncate font-medium">{asset.name}</p>
+										<p class="mt-1 text-sm text-gray-500">ID: {asset.id}</p>
+										<button
+											class="mt-3 w-full rounded-lg bg-blue-600 py-2 text-white transition-colors hover:bg-blue-700"
+											onclick={() => {
+												navigator.clipboard.writeText(asset.id);
+											}}
+										>
+											Copy Asset ID
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<div class="mt-6">
+					<label class="block w-full">
+						<div
+							class="flex w-full cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700"
+						>
+							<svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+								/>
+							</svg>
+							Upload New Asset
+						</div>
+						<input
+							type="file"
+							accept="image/png,image/jpeg,image/svg+xml"
+							onchange={handleAssetUpload}
+							class="hidden"
+						/>
+					</label>
+				</div>
+			</div>
+		</div>
+	{/if}
 </main>
 
 <style>
