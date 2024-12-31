@@ -3,6 +3,7 @@
 	// @ts-nocheck
 
 	import { onMount } from 'svelte';
+	import Navbar from '$lib/components/layout/Navbar.svelte';
 
 	let prompt = $state('');
 	let history = $state([]);
@@ -361,11 +362,7 @@
 </script>
 
 <main class="min-h-screen bg-gray-50">
-	<nav class="border-b bg-white shadow-sm">
-		<div class="mx-auto px-4 py-3">
-			<h1 class="text-2xl font-semibold text-gray-800">Component Designer</h1>
-		</div>
-	</nav>
+	<Navbar />
 
 	<div class="mx-auto p-4 lg:p-6">
 		<div class="flex flex-col gap-6 lg:flex-row">
