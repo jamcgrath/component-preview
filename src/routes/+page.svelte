@@ -1,8 +1,8 @@
-<!-- App.svelte -->
 <script>
-	// @ts-nocheck
-
 	import { onMount } from 'svelte';
+	import DesignPanel from '$lib/components/DesignPanel.svelte';
+	import PreviewPanel from '$lib/components/PreviewPanel.svelte';
+	import AssetManagerModal from '$lib/components/AssetManagerModal.svelte';
 
 	let prompt = $state('');
 	let history = $state([]);
