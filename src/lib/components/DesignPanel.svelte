@@ -55,6 +55,23 @@
 		if (file) handleFile(file);
 	}
 
+	async function handleFile(file) {
+		try {
+			if (!file.type.startsWith('image/')) {
+				throw new Error('Please upload an image file');
+			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				imagePreview = e.target.result;
+			};
+			reader.readAsDataURL(file);
+		} catch (e) {
+			error = e.message || 'Failed to upload image';
+			console.error(e);
+		}
+	}
+
 	function handleFileInput(event) {
 		const file = event.target?.files[0];
 		if (file) handleFile(file);
