@@ -76,6 +76,10 @@
 		const file = event.target?.files[0];
 		if (file) handleFile(file);
 	}
+
+	function removeImage() {
+		imagePreview = null;
+	}
 </script>
 
 <div class="flex flex-col gap-6 {className}">
