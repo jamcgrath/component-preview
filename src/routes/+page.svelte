@@ -55,18 +55,18 @@
 			}
 
 			const reader = new FileReader();
-
-			reader.onload = (e) => {
+			
+			reader.onload = async (e) => {
 				const newAsset = {
 					id: Date.now().toString(),
 					name: file.name,
 					type: file.type,
-					url: e.target.result, // This should contain the base64 data URL
+					url: e.target.result,
 					timestamp: new Date().toISOString()
 				};
 
 				assets = [...assets, newAsset];
-				localStorage.setItem('componentAssets', JSON.stringify(assets));
+				await localStorage.setItem('componentAssets', JSON.stringify(assets));
 			};
 
 			reader.readAsDataURL(file);

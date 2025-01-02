@@ -117,7 +117,7 @@
 					<input
 						type="file"
 						accept="image/png,image/jpeg,image/svg+xml"
-						onchange={(e) => onupload(e.target?.files?.[0])}
+						onchange={(e) => onupload(e)}
 						class="hidden"
 					/>
 				</label>
