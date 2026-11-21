@@ -26,7 +26,7 @@ A SvelteKit app (Svelte 5, Tailwind) with two moving parts:
 ### Branches
 
 - `main` — the working proof of concept, the whole UI in one page.
-- `convert-to-components` / `convert-2nd-try` — attempts to split that page into `DesignPanel`, `PreviewPanel` and `AssetManagerModal` components.
+- `convert-to-components` — an attempt to split that page into `DesignPanel`, `PreviewPanel` and `AssetManagerModal` components.
 
 ## Running it
 
